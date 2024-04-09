@@ -1,0 +1,153 @@
+   val gson = Gson()
+   val jsonString = gson.toJson(sourceListResponse)
+   Log.d("onStartCommandCallApi3", "JSON response: $jsonString")
+  
+  
+  
+  Code Sample 1-
+  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+          createNotificationChannel()
+          val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+              .setContentTitle("Foreground Service")
+              .setContentText("Sources")
+              .setSmallIcon(R.drawable.app_icon)
+              .build()
+          startForeground(112, notification)
+  
+          Log.e("onStartCommandCallApi1 ", "SourceList")
+          val sh = SharedManager(applicationContext)
+          db.deleteSourceTable()
+  
+          val apiInterface = RetroApi.client!!.create(APIClient::class.java)
+  
+          apiInterface?.sourceData("application/json", sh.sessionID.toString())?.enqueue(object : Callback<SourceListResponse> {
+              override fun onResponse(call: Call<SourceListResponse>, response: Response<SourceListResponse>) {
+                  Log.d("onStartCommandCallApi2", "Response body: ${response.body()}")
+                  Log.d("onStartCommandCallApi2", "API call successful")
+                  if (response.isSuccessful) {
+                      val sourceListResponse = response.body()
+                      val gson = Gson()
+                      val jsonString = gson.toJson(sourceListResponse)
+                      Log.d("onStartCommandCallApi3", "JSON response: $jsonString")
+  
+  //                   Log.d("onStartCommandCallApi3",  "${response.body()}")
+                      if (sourceListResponse != null) {
+                          // Convert response to JSON string using Gson
+                         /* val gson = Gson()
+                          val jsonString = gson.toJson(sourceListResponse)
+                          Log.d("onStartCommandCallApi3", "JSON response: $jsonString")*/
+  
+                          if (!sourceListResponse.error) {
+                              for (source in sourceListResponse.sourceList) {
+                                  val id = source.id
+                                  val name = source.name
+                                  // Insert source into the database
+                                  db.insertSources(id, name)
+                                  Log.d("onStartCommandSource3", "ID: $id, Name: $name")
+                              }
+  
+                              processResponse(response.body().toString())
+  
+                              Log.d("onStartCommandCallApi4", "processResponse called")
+  
+                          } else {
+                              Log.e("onStartCommandCall", "Error: ${sourceListResponse.message}")
+                          }
+                      } else {
+                          Log.e("onStartCommandCall", "Response body is null")
+                      }
+                  } else {
+                      Log.e("onStartCommandCall", "Unsuccessful response: ${response.code()}")
+                  }
+                  // Stop the foreground service
+                  stopForeground(true)
+                  stopSelf()
+              }
+  
+              override fun onFailure(call: Call<SourceListResponse>, t: Throwable) {
+                  Log.e("onStartCommandCallApi", "Failed: ${t.message}")
+                  // Stop the foreground service
+                  stopForeground(true)
+                  stopSelf()
+              }
+          })
+  
+          return START_NOT_STICKY
+      }
+  
+  
+  
+  
+  
+  
+  
+  CODE SAMPPLE 2 ----
+  
+  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+          createNotificationChannel()
+          val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+              .setContentTitle("Foreground Service")
+              .setContentText("Country")
+              .setSmallIcon(R.drawable.app_icon)
+              .build()
+          startForeground(111, notification)
+  
+          val sh = SharedManager(applicationContext)
+          val sessionID = sh.sessionID
+          Log.e("SyncCountryServiceId", sessionID.toString())
+  
+          if (sessionID == null) {
+              Log.e("SyncCountryService", "Session ID is null")
+              stopForeground(true)
+              stopSelf()
+              return START_NOT_STICKY
+          }
+  
+          val apiClient = RetroApi.client!!.create(APIClient::class.java)
+  
+          apiClient.getCountryStateCity("application/json", sessionID)
+              .enqueue(object : Callback<GetCountryStateCityModel> {
+                  override fun onResponse(
+                      call: Call<GetCountryStateCityModel>,
+                      response: Response<GetCountryStateCityModel>
+                  ) {
+                      Log.d("SyncCountryService", "Response code: ${response.code()}")
+                      if (response.isSuccessful) {
+                          val responseBody = response.body()
+                          if (responseBody != null) {
+  //                            Log.d("SyncCountryService", "Response body: $responseBody")
+                              val gson = Gson()
+                              val jsonString = gson.toJson(responseBody)
+  
+                              Log.d("SyncCountryService", "Response body: $jsonString")
+                              processResponseForCountryState(responseBody)
+                          } else {
+                              Log.e("SyncCountryService", "Response body is null")
+                          }
+                      } else {
+                          if (response.code() == 401) {
+                              Log.d("SyncCountryService", "User login from another Device")
+                              Toast.makeText(
+                                  this@SyncCountryService,
+                                  "User login from another Device",
+                                  Toast.LENGTH_SHORT
+                              ).show()
+                          } else {
+                              Log.e("SyncCountryService", "Unsuccessful response code: ${response.code()}")
+                          }
+                      }
+                      stopForeground(true)
+                      stopSelf()
+                  }
+  
+                  override fun onFailure(call: Call<GetCountryStateCityModel>, t: Throwable) {
+                      t.printStackTrace()
+                      Log.e("SyncCountryService", "API call failed: ${t.message}")
+                      stopForeground(true)
+                      stopSelf()
+                  }
+              })
+  
+          return START_NOT_STICKY
+      }
+  
