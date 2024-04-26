@@ -1,7 +1,15 @@
-   val gson = Gson()
+TYPE 1- 
+val gson = Gson()
    val jsonString = gson.toJson(sourceListResponse)
    Log.d("onStartCommandCallApi3", "JSON response: $jsonString")
-  
+
+
+TYPW 2 - 
+
+  // Convert getCheckListModel to JSON using Gson
+     val gson = Gson()
+     val jsonString = gson.toJson(getCheckListModel)
+     Log.d("processResponse", "Checklist item JSON: $jsonString")
   
   
   Code Sample 1-
